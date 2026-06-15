@@ -1,0 +1,2064 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CNN Visual Explorer</title>
+<style>
+/* ── TOKENS ── */
+:root {
+  --bg:      #FFFFFF;
+  --bg2:     #FFFFFF;
+  --bg3:     #F0F0F0;
+  --bg4:     #F1F1F1;
+  --border:  #2a3050;
+  --border2: #3a4570;
+  --txt:     #21263a;
+  --txt2:    #3a4570;
+  --txt3:    #5a6380;
+  --acc:     #4f8ef7;
+  --acc2:    #7c3aed;
+  --green:   #22c55e;
+  --amber:   #f59e0b;
+  --red:     #ef4444;
+  --teal:    #14b8a6;
+  --pink:    #ec4899;
+  --mono:    'Courier New', monospace;
+  --sans:    system-ui, -apple-system, sans-serif;
+  --radius:  8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--txt);
+  font-family: var(--sans);
+  font-size: 14px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── LAYOUT ── */
+.app { display: flex; min-height: 100vh; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  padding: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-logo {
+  padding: 20px 16px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-logo .logo-tag {
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--acc);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.sidebar-logo h1 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--txt);
+  margin-top: 4px;
+  line-height: 1.3;
+}
+.nav-section-label {
+  padding: 12px 16px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--txt3);
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  color: var(--txt2);
+  font-size: 13px;
+  border-left: 2px solid transparent;
+  transition: all 0.15s;
+  user-select: none;
+}
+.nav-item:hover { background: var(--bg3); color: var(--txt); }
+.nav-item.active { background: var(--bg3); color: var(--acc); border-left-color: var(--acc); }
+.nav-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--border2);
+  flex-shrink: 0;
+}
+.nav-item.active .nav-dot { background: var(--acc); }
+
+/* ── MAIN ── */
+.main {
+  flex: 1;
+  padding: 24px 28px;
+  min-width: 0;
+}
+
+/* ── SECTIONS ── */
+.section { display: none; }
+.section.active { display: block; }
+
+.section-header {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.section-eyebrow {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--acc);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.section-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--txt);
+}
+.section-desc {
+  font-size: 13px;
+  color: var(--txt2);
+  margin-top: 6px;
+  line-height: 1.6;
+  max-width: 640px;
+}
+
+/* ── CARDS ── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--txt);
+  margin-bottom: 10px;
+}
+.card-sub {
+  font-size: 11px;
+  color: var(--txt3);
+  margin-bottom: 10px;
+}
+
+/* ── GRID UTILS ── */
+.row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.col { flex: 1; min-width: 200px; }
+
+/* ── PIXEL GRID ── */
+.px-grid { display: inline-grid; border: 1px solid var(--border2); }
+.px-cell {
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px;
+  font-family: var(--mono);
+  cursor: default;
+  transition: background 0.1s;
+  border: 0.5px solid rgba(255,255,255,0.05);
+}
+.px-cell.on  { background: #4f8ef7; color: #fff; font-weight: 700; }
+.px-cell.off { background: #13161e; color: #3a4570; }
+.px-cell.hl  { background: #f59e0b; color: #1a0e00; font-weight: 700; }
+.px-cell.hl2 { background: #7c3aed; color: #fff; font-weight: 700; }
+.px-cell.res { background: #22c55e; color: #001a0a; font-weight: 700; }
+.px-cell.neg { background: #ef4444; color: #fff; font-weight: 700; }
+.px-cell.mid { background: #14b8a6; color: #001a14; font-weight: 700; }
+
+/* small grid */
+.px-sm .px-cell { width: 20px; height: 20px; font-size: 8px; }
+.px-xs .px-cell { width: 14px; height: 14px; font-size: 0; }
+
+/* ── FILTER GRID ── */
+.filter-grid {
+  display: inline-grid;
+  grid-template-columns: repeat(3,1fr);
+  border: 1px solid var(--border2);
+  gap: 0;
+}
+.filter-grid .px-cell { width: 36px; height: 36px; font-size: 11px; font-weight: 700; }
+
+/* ── CONTROLS ── */
+.btn {
+  padding: 6px 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--txt);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn:hover { background: var(--bg4); border-color: var(--acc); color: var(--acc); }
+.btn.primary { background: var(--acc); color: #fff; border-color: var(--acc); }
+.btn.primary:hover { background: #3a7de8; }
+.btn.active { background: var(--acc); color: #fff; border-color: var(--acc); }
+.ctrl-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+
+input[type=range] {
+  -webkit-appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border2);
+  outline: none;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--acc);
+  cursor: pointer;
+}
+select {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  color: var(--txt);
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* ── TAGS / BADGES ── */
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--mono);
+  letter-spacing: 0.5px;
+}
+.tag-blue  { background: rgba(79,142,247,.15); color: var(--acc); border: 1px solid rgba(79,142,247,.3); }
+.tag-green { background: rgba(34,197,94,.15);  color: var(--green); border: 1px solid rgba(34,197,94,.3); }
+.tag-amber { background: rgba(245,158,11,.15); color: var(--amber); border: 1px solid rgba(245,158,11,.3); }
+.tag-red   { background: rgba(239,68,68,.15);  color: var(--red); border: 1px solid rgba(239,68,68,.3); }
+.tag-purple{ background: rgba(124,58,237,.15); color: #a78bfa; border: 1px solid rgba(124,58,237,.3); }
+.tag-teal  { background: rgba(20,184,166,.15); color: var(--teal); border: 1px solid rgba(20,184,166,.3); }
+
+/* ── FORMULA BOX ── */
+.formula {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--acc);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 10px 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--teal);
+  margin: 8px 0;
+  line-height: 1.7;
+}
+
+/* ── NOTE BOX ── */
+.note {
+  background: rgba(79,142,247,.08);
+  border: 1px solid rgba(79,142,247,.2);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #a0b4e8;
+  line-height: 1.6;
+  margin: 10px 0;
+}
+.note strong { color: var(--acc); }
+
+/* ── PROGRESS BAR ── */
+.bar-wrap { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.bar-label { width: 120px; font-size: 11px; color: var(--txt2); flex-shrink: 0; }
+.bar-track { flex: 1; height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+.bar-fill  { height: 100%; border-radius: 4px; transition: width 0.4s; }
+.bar-val   { width: 36px; font-size: 11px; color: var(--txt2); text-align: right; font-family: var(--mono); }
+
+/* ── PIPELINE ── */
+.pipeline {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+  padding: 12px 0;
+  flex-wrap: nowrap;
+}
+.pipe-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.pipe-box {
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  text-align: center;
+  min-width: 80px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+.pipe-box:hover { transform: translateY(-2px); }
+.pipe-dim { font-size: 9px; font-family: var(--mono); opacity: 0.7; margin-top: 2px; }
+.pipe-arrow { color: var(--txt3); padding: 0 6px; font-size: 16px; margin-bottom: 14px; }
+
+/* ── STEP INDICATOR ── */
+.step-indicator { display: flex; gap: 4px; flex-wrap: wrap; margin: 8px 0; }
+.step-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--border2);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.step-dot.active { background: var(--acc); transform: scale(1.4); }
+.step-dot.done { background: var(--green); }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--txt3); }
+
+/* ── CALC DISPLAY ── */
+.calc-display {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--teal);
+  min-height: 64px;
+  line-height: 1.8;
+}
+
+/* ── OPERATION TYPE CARDS ── */
+.op-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.op-card:hover, .op-card.selected {
+  border-color: var(--acc);
+  background: var(--bg3);
+}
+.op-card.selected { box-shadow: 0 0 0 1px rgba(79,142,247,.3); }
+.op-card-title { font-size: 13px; font-weight: 600; color: var(--txt); margin-bottom: 4px; }
+.op-card-desc  { font-size: 11px; color: var(--txt3); line-height: 1.5; }
+
+/* ── ANIMATION ── */
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+@keyframes slideIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+.anim-in { animation: slideIn 0.25s ease; }
+
+/* ── ARCHITECTURE VIZ ── */
+.arch-layer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.arch-layer:hover { transform: translateY(-3px); }
+.arch-layer-box {
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+}
+.arch-slice {
+  border-radius: 2px;
+  transition: all 0.3s;
+}
+.arch-label { font-size: 10px; color: var(--txt3); text-align: center; margin-top: 4px; }
+.arch-sublabel { font-size: 9px; color: var(--txt3); font-family: var(--mono); }
+.arch-pipeline {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 20px 0 8px;
+}
+.arch-arrow { color: var(--border2); font-size: 12px; padding: 0 2px; margin-bottom: 20px; }
+
+/* Tooltip */
+.tooltip {
+  position: fixed;
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--txt);
+  z-index: 999;
+  pointer-events: none;
+  max-width: 220px;
+  line-height: 1.5;
+  display: none;
+}
+
+/* ── COMPARE VIEW ── */
+.compare-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 10px;
+}
+.compare-cell {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.compare-cell .cc-label { font-size: 12px; font-weight: 600; color: var(--txt); }
+.compare-cell .cc-sub   { font-size: 10px; color: var(--txt3); text-align: center; }
+
+/* ── ReLU chart ── */
+canvas { border-radius: 4px; }
+
+/* ── POOLING ── */
+.pool-region {
+  outline: 2px solid var(--amber);
+  outline-offset: -2px;
+  border-radius: 2px;
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-tag">CNN Explorer</div>
+    <h1>Konvolusi Neural Network</h1>
+  </div>
+
+  <div class="nav-section-label">Dasar</div>
+  <div class="nav-item active" onclick="showSection('s-intro')">
+    <div class="nav-dot"></div> Representasi Gambar
+  </div>
+  <div class="nav-item" onclick="showSection('s-conv')">
+    <div class="nav-dot"></div> Operasi Konvolusi
+  </div>
+  <div class="nav-item" onclick="showSection('s-ops')">
+    <div class="nav-dot"></div> Jenis-Jenis Konvolusi
+  </div>
+
+  <div class="nav-section-label">Detail Proses</div>
+  <div class="nav-item" onclick="showSection('s-relu')">
+    <div class="nav-dot"></div> Aktivasi (ReLU & lain)
+  </div>
+  <div class="nav-item" onclick="showSection('s-pool')">
+    <div class="nav-dot"></div> Pooling
+  </div>
+  <div class="nav-item" onclick="showSection('s-fc')">
+    <div class="nav-dot"></div> Flatten & FC Layer
+  </div>
+
+  <div class="nav-section-label">Klasifikasi</div>
+  <div class="nav-item" onclick="showSection('s-classify')">
+    <div class="nav-dot"></div> Prediksi X / O / Noise
+  </div>
+  <div class="nav-item" onclick="showSection('s-filters')">
+    <div class="nav-dot"></div> Filter Explorer
+  </div>
+
+  <div class="nav-section-label">Arsitektur</div>
+  <div class="nav-item" onclick="showSection('s-arch')">
+    <div class="nav-dot"></div> Pipeline CNN
+  </div>
+  <div class="nav-item" onclick="showSection('s-playground')">
+    <div class="nav-dot"></div> Playground
+  </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+<!-- ═══════════════════════════════════════
+     SECTION: INTRO
+════════════════════════════════════════ -->
+<div id="s-intro" class="section active">
+  <div class="section-header">
+    <div class="section-eyebrow">BAB 01</div>
+    <div class="section-title">Representasi Gambar sebagai Matriks</div>
+    <div class="section-desc">Gambar grayscale adalah grid angka. Setiap piksel bernilai 0–255. Di sini kita sederhanakan ke 0/1 agar logikanya mudah ditelusuri tangan.</div>
+  </div>
+
+  <div class="row">
+    <div class="card col">
+      <div class="card-title">Pola "X" <span class="tag tag-blue">9×9</span></div>
+      <div class="card-sub">Diagonal kiri-atas ke kanan-bawah + kanan-atas ke kiri-bawah bersilang</div>
+      <div id="grid-x-intro"></div>
+    </div>
+    <div class="card col">
+      <div class="card-title">Pola "O" <span class="tag tag-green">9×9</span></div>
+      <div class="card-sub">Batas luar aktif, bagian tengah kosong</div>
+      <div id="grid-o-intro"></div>
+    </div>
+    <div class="card col">
+      <div class="card-title">Tidak Berpola <span class="tag tag-amber">9×9</span></div>
+      <div class="card-sub">Distribusi piksel acak, tidak ada pola sistematis</div>
+      <div id="grid-n-intro"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Mengapa perlu CNN?</div>
+    <div class="row" style="margin-bottom:0">
+      <div class="col" style="min-width:160px">
+        <div style="font-size:12px; color:var(--txt2); line-height:1.8">
+          <div style="color:var(--red); font-weight:600; margin-bottom:4px">❌ Pendekatan Naif (MLP Biasa)</div>
+          Ratakan 9×9 = 81 piksel → hubungkan langsung ke output<br>
+          Masalah: geser X 1 piksel → semua 81 angka berubah total
+        </div>
+      </div>
+      <div class="col" style="min-width:160px">
+        <div style="font-size:12px; color:var(--txt2); line-height:1.8">
+          <div style="color:var(--green); font-weight:600; margin-bottom:4px">✅ CNN</div>
+          Filter kecil geser seluruh gambar → deteksi pola lokal<br>
+          Keuntungan: X di pojok mana pun tetap terdeteksi
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SECTION: KONVOLUSI
+════════════════════════════════════════ -->
+<div id="s-conv" class="section">
+  <div class="section-header">
+    <div class="section-eyebrow">BAB 02</div>
+    <div class="section-title">Operasi Konvolusi Step-by-Step</div>
+    <div class="section-desc">Filter 3×3 bergerak dari kiri-atas ke kanan-bawah. Di setiap posisi, kita kalikan elemen-per-elemen lalu jumlahkan → satu nilai di feature map.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Pilih Pola Input & Filter</div>
+    <div class="ctrl-row" style="margin-bottom:12px">
+      <select id="conv-pattern" onchange="initConvDemo()">
+        <option value="X">Pola X</option>
+        <option value="O">Pola O</option>
+        <option value="N">Tidak Berpola</option>
+      </select>
+      <select id="conv-filter" onchange="initConvDemo()">
+        <option value="diagDR">Filter: Diagonal ↘</option>
+        <option value="diagUL">Filter: Diagonal ↗</option>
+        <option value="edgeH">Filter: Tepi Horizontal</option>
+        <option value="edgeV">Filter: Tepi Vertikal</option>
+        <option value="blur">Filter: Blur (rata)</option>
+        <option value="sharp">Filter: Sharpen</option>
+      </select>
+    </div>
+
+    <div class="row" style="align-items:flex-start; gap:20px">
+      <div style="display:flex; flex-direction:column; gap:6px">
+        <div style="font-size:11px; color:var(--txt3); font-family:var(--mono)">INPUT (9×9)</div>
+        <div id="conv-input-grid" class="px-grid" style="grid-template-columns:repeat(9,1fr)"></div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:center; padding-top:30px">
+        <div style="font-size:18px; color:var(--txt3)">⊛</div>
+        <div style="font-size:10px; color:var(--txt3)">konvolusi</div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px">
+        <div style="font-size:11px; color:var(--txt3); font-family:var(--mono)">FILTER (3×3)</div>
+        <div id="conv-filter-grid" class="filter-grid"></div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:center; padding-top:30px">
+        <div style="font-size:18px; color:var(--txt3)">=</div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px">
+        <div style="font-size:11px; color:var(--txt3); font-family:var(--mono)">FEATURE MAP (7×7)</div>
+        <div id="conv-fm-grid" class="px-grid" style="grid-template-columns:repeat(7,1fr)"></div>
+      </div>
+    </div>
+
+    <div class="calc-display" id="conv-calc" style="margin-top:12px">
+      Tekan tombol di bawah untuk mulai animasi...
+    </div>
+
+    <div class="ctrl-row">
+      <button class="btn primary" onclick="stepConv(-1)">← Sebelumnya</button>
+      <button class="btn primary" onclick="stepConv(1)">Selanjutnya →</button>
+      <button class="btn" onclick="autoConv()" id="auto-btn">▶ Auto</button>
+      <button class="btn" onclick="initConvDemo()">↺ Reset</button>
+      <span style="font-size:11px; color:var(--txt3); margin-left:8px" id="conv-step-info">Langkah 0 / 49</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Rumus Konvolusi</div>
+    <div class="formula">
+      Feature_Map[i][j] = Σ Σ Input[i+m][j+n] × Filter[m][n]<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;m=0..2  n=0..2<br><br>
+      Output size = (Input - Filter + 2×Padding) / Stride + 1<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= (9 - 3 + 0) / 1 + 1 = 7
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SECTION: JENIS KONVOLUSI
+════════════════════════════════════════ -->
+<div id="s-ops" class="section">
+  <div class="section-header">
+    <div class="section-eyebrow">BAB 03</div>
+    <div class="section-title">Jenis-Jenis Operasi Konvolusi</div>
+    <div class="section-desc">Selain konvolusi standar, ada banyak varian yang dirancang untuk efisiensi atau tujuan tertentu.</div>
+  </div>
+
+  <div class="row" style="margin-bottom:12px">
+    <div class="op-card col selected" onclick="selectOp('standard', this)" id="op-standard">
+      <div class="op-card-title">Standard Conv <span class="tag tag-blue">Dasar</span></div>
+      <div class="op-card-desc">Filter bergeser dengan stride=1 tanpa padding. Output lebih kecil dari input.</div>
+    </div>
+    <div class="op-card col" onclick="selectOp('same', this)" id="op-same">
+      <div class="op-card-title">Same Padding <span class="tag tag-green">Umum</span></div>
+      <div class="op-card-desc">Tambah nol di tepi agar output sama besar dengan input.</div>
+    </div>
+    <div class="op-card col" onclick="selectOp('stride', this)" id="op-stride">
+      <div class="op-card-title">Strided Conv <span class="tag tag-amber">Efisien</span></div>
+      <div class="op-card-desc">Filter meloncat stride=2, menggantikan pooling layer.</div>
+    </div>
+  </div>
+  <div class="row" style="margin-bottom:16px">
+    <div class="op-card col" onclick="selectOp('depthwise', this)" id="op-depthwise">
+      <div class="op-card-title">Depthwise <span class="tag tag-purple">MobileNet</span></div>
+      <div class="op-card-desc">Setiap channel diproses filter terpisah. Jauh lebih hemat parameter.</div>
+    </div>
+    <div class="op-card col" onclick="selectOp('dilated', this)" id="op-dilated">
+      <div class="op-card-title">Dilated Conv <span class="tag tag-teal">Receptive Field</span></div>
+      <div class="op-card-desc">Filter "direnggangkan" dengan dilation rate=2 agar jangkauan lebih luas tanpa parameter tambahan.</div>
+    </div>
+    <div class="op-card col" onclick="selectOp('transpose', this)" id="op-transpose">
+      <div class="op-card-title">Transposed Conv <span class="tag tag-red">Upsampling</span></div>
+      <div class="op-card-desc">Kebalikan konvolusi — memperbesar ukuran. Dipakai di segmentasi dan generative model.</div>
+    </div>
+  </div>
+
+  <div class="card" id="op-demo-card">
+    <div class="card-title" id="op-demo-title">Standard Convolution</div>
+    <div id="op-demo-content"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Perbandingan Parameter & Kompleksitas</div>
+    <div id="param-compare" style="margin-top:6px"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SECTION: RELU
+════════════════════════════════════════ -->
+<div id="s-relu" class="section">
+  <div class="section-header">
+    <div class="section-eyebrow">BAB 04</div>
+    <div class="section-title">Fungsi Aktivasi</div>
+    <div class="section-desc">Tanpa fungsi non-linear, berapapun layer yang ditumpuk hasilnya tetap satu transformasi linear. Aktivasi memberi CNN kemampuan belajar pola non-linear.</div>
+  </div>
+
+  <div class="row">
+    <div class="card col">
+      <div class="card-title">Pilih Fungsi Aktivasi</div>
+      <div class="ctrl-row" style="flex-direction:column; align-items:flex-start; gap:6px">
+        <button class="btn active" onclick="selectActivation('relu', this)">ReLU</button>
+        <button class="btn" onclick="selectActivation('leakyrelu', this)">Leaky ReLU</button>
+        <button class="btn" onclick="selectActivation('sigmoid', this)">Sigmoid</button>
+        <button class="btn" onclick="selectActivation('tanh', this)">Tanh</button>
+        <button class="btn" onclick="selectActivation('elu', this)">ELU</button>
+      </div>
+    </div>
+    <div class="card col" style="flex:3">
+      <div class="card-title" id="act-title">ReLU — Rectified Linear Unit</div>
+      <canvas id="act-canvas" width="380" height="200" style="display:block; background:var(--bg3); border-radius:4px; border:1px solid var(--border); margin-bottom:10px"></canvas>
+      <div class="formula" id="act-formula">f(x) = max(0, x)</div>
+      <div class="note" id="act-note"><strong>Kelebihan:</strong> Sederhana, gradient tidak menghilang untuk x>0, komputasi cepat.<br><strong>Kelemahan:</strong> "Dying ReLU" — neuron bisa mati permanen jika inputnya selalu negatif.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Demonstrasi ReLU pada Feature Map</div>
+    <div class="card-sub">Lihat bagaimana nilai negatif dihilangkan</div>
+    <div class="row" style="align-items:flex-start">
+      <div style="display:flex; flex-direction:column; gap:6px">
+        <div style="font-size:11px; color:var(--txt3)">Sebelum ReLU (ada negatif)</div>
+        <div id="relu-before" class="px-grid px-sm" style="grid-template-columns:repeat(7,1fr)"></div>
+      </div>
+      <div style="padding-top:30px; font-size:18px; color:var(--txt3)">→</div>
+      <div style="display:flex; flex-direction:column; gap:6px">
+        <div style="font-size:11px; color:var(--txt3)">Setelah ReLU (negatif → 0)</div>
+        <div id="relu-after" class="px-grid px-sm" style="grid-template-columns:repeat(7,1fr)"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SECTION: POOLING
+════════════════════════════════════════ -->
+<div id="s-pool" class="section">
+  <div class="section-header">
+    <div class="section-eyebrow">BAB 05</div>
+    <div class="section-title">Pooling Layer</div>
+    <div class="section-desc">Pooling meringkas feature map dengan mengambil nilai representatif dari setiap region. Hasilnya: ukuran lebih kecil, dan tahan terhadap pergeseran kecil (translation invariance).</div>
+  </div>
+
+  <div class="row">
+    <div class="card col">
+      <div class="card-title">Jenis Pooling</div>
+      <div class="ctrl-row" style="flex-direction:column; align-items:flex-start; gap:6px">
+        <button class="btn active" onclick="selectPool('max', this)">Max Pooling</button>
+        <button class="btn" onclick="selectPool('avg', this)">Average Pooling</button>
+        <button class="btn" onclick="selectPool('global', this)">Global Avg Pool</button>
+      </div>
+      <div class="note" style="margin-top:10px" id="pool-note">
+        <strong>Max Pooling:</strong> Ambil nilai terbesar. Mendeteksi kehadiran fitur — tidak peduli posisi persisnya.
+      </div>
+    </div>
+    <div class="card col" style="flex:3">
+      <div class="card-title" id="pool-title">Max Pooling 2×2</div>
+      <div class="row" style="align-items:flex-start">
+        <div style="display:flex; flex-direction:column; gap:6px">
+          <div style="font-size:11px; color:var(--txt3)">Input (6×6) <span class="tag tag-amber">Klik region</span></div>
+          <div id="pool-input" class="px-grid px-sm" style="grid-template-columns:repeat(6,1fr); cursor:pointer"></div>
+        </div>
+        <div style="padding-top:30px; font-size:18px; color:var(--txt3)">→</div>
+        <div style="display:flex; flex-direction:column; gap:6px">
+          <div style="font-size:11px; color:var(--txt3)">Output (3×3)</div>
+          <div id="pool-output" class="px-grid px-sm" style="grid-template-columns:repeat(3,1fr)"></div>
+        </div>
+      </div>
+      <div class="calc-display" id="pool-calc" style="margin-top:10px">Klik pada salah satu blok 2×2 untuk melihat perhitungan...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SECTION: FC LAYER
+════════════════════════════════════════ -->
+<div id="s-fc" class="section">
+  <div class="section-header">
+    <div class="section-eyebrow">BAB 06</div>
+    <div class="section-title">Flatten & Fully Connected Layer</div>
+    <div class="section-desc">Setelah semua konvolusi dan pooling, feature map "dipipihkan" menjadi vektor 1D, lalu diproses oleh layer fully connected untuk pengambilan keputusan akhir.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Proses Flatten → FC → Output</div>
+    <div id="fc-vis" style="padding:8px 0"></div>
+    <div class="ctrl-row">
+      <button class="btn primary" onclick="animateFC()">▶ Animasi Aliran</button>
+      <button class="btn" onclick="resetFC()">↺ Reset</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card col">
+      <div class="card-title">Flatten</div>
+      <div style="font-size:12px; color:var(--txt2); line-height:1.7">
+        Feature map 3×3×4 = <strong style="color:var(--acc)">36 nilai</strong> digabung menjadi vektor panjang [v₁, v₂, ..., v₃₆].<br><br>
+        Operasi ini tidak mengubah nilai, hanya mengubah bentuk (reshape).
+      </div>
+      <div class="formula" style="margin-top:8px">flatten(3×3×4) → [36]</div>
+    </div>
+    <div class="card col">
+      <div class="card-title">Fully Connected (Dense) Layer</div>
+      <div style="font-size:12px; color:var(--txt2); line-height:1.7">
+        Setiap neuron terhubung ke <em>semua</em> input sebelumnya. Bobot (W) dan bias (b) adalah parameter yang dipelajari.<br><br>
+        <span class="tag tag-blue">36 input</span> → <span class="tag tag-purple">16 hidden</span> → <span class="tag tag-green">3 output</span>
+      </div>
+      <div class="formula" style="margin-top:8px">output = W·x + b<br>kemudian softmax(output) → probabilitas</div>
+    </div>
+    <div class="card col">
+      <div class="card-title">Softmax</div>
+      <div style="font-size:12px; color:var(--txt2); line-height:1.7">
+        Mengubah skor (logit) menjadi probabilitas yang jumlahnya tepat = 1.
+      </div>
+      <div class="formula" style="margin-top:8px">σ(zᵢ) = e^zᵢ / Σ e^zⱼ<br><br>
+[3.1, 0.4, 0.2] →<br>[0.88, 0.07, 0.05]</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SECTION: CLASSIFY
+════════════════════════════════════════ -->
+<div id="s-classify" class="section">
+  <div class="section-header">
+    <div class="section-eyebrow">BAB 07</div>
+    <div class="section-title">Klasifikasi Lengkap X / O / Noise</div>
+    <div class="section-desc">Lihat bagaimana CNN memproses setiap pola dari awal hingga keputusan akhir. Setiap layer menambah abstraksi.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Pilih Pola untuk Diklasifikasi</div>
+    <div class="ctrl-row">
+      <button class="btn active" id="cls-btn-X" onclick="classifyPat('X')">Pola X</button>
+      <button class="btn" id="cls-btn-O" onclick="classifyPat('O')">Pola O</button>
+      <button class="btn" id="cls-btn-N" onclick="classifyPat('N')">Tidak Berpola</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card" style="min-width:160px">
+      <div class="card-title">Input</div>
+      <div id="cls-input-grid" class="px-grid px-sm" style="grid-template-columns:repeat(9,1fr)"></div>
+    </div>
+    <div class="card" style="min-width:160px">
+      <div class="card-title">Conv+ReLU (Filter A, diagonal ↘)</div>
+      <div id="cls-conv-grid" class="px-grid px-sm" style="grid-template-columns:repeat(7,1fr)"></div>
+      <div style="font-size:10px; color:var(--txt3); margin-top:4px">Biru = aktif kuat</div>
+    </div>
+    <div class="card" style="min-width:100px">
+      <div class="card-title">Max Pool</div>
+      <div id="cls-pool-grid" class="px-grid" style="grid-template-columns:repeat(3,1fr)"></div>
+    </div>
+    <div class="card" style="flex:1">
+      <div class="card-title">Prediksi Akhir <span class="tag tag-green" id="cls-winner-tag"></span></div>
+      <div id="cls-bars" style="margin-top:8px"></div>
+      <div class="note" style="margin-top:10px" id="cls-explanation"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Aktivasi 4 Filter pada Input Terpilih</div>
+    <div class="card-sub">Setiap filter mendeteksi fitur berbeda</div>
+    <div id="four-filter-maps" class="row" style="gap:12px; margin-bottom:0"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SECTION: FILTER EXPLORER
+════════════════════════════════════════ -->
+<div id="s-filters" class="section">
+  <div class="section-header">
+    <div class="section-eyebrow">BAB 08</div>
+    <div class="section-title">Filter Explorer</div>
+    <div class="section-desc">Edit nilai filter secara manual dan lihat hasilnya secara real-time pada pola yang dipilih.</div>
+  </div>
+
+  <div class="row">
+    <div class="card col" style="min-width:260px">
+      <div class="card-title">Edit Filter 3×3</div>
+      <div class="card-sub">Klik sel dan ubah nilainya (-2 sampai 2)</div>
+      <div id="edit-filter-grid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:2px; max-width:150px; margin:8px 0"></div>
+      <div class="ctrl-row">
+        <select id="preset-filter" onchange="loadPreset()">
+          <option value="">Preset filter...</option>
+          <option value="identity">Identity</option>
+          <option value="diagDR">Diagonal ↘</option>
+          <option value="diagUL">Diagonal ↗</option>
+          <option value="edgeH">Edge Horizontal</option>
+          <option value="edgeV">Edge Vertikal</option>
+          <option value="blur">Blur</option>
+          <option value="sharp">Sharpen</option>
+          <option value="emboss">Emboss</option>
+        </select>
+      </div>
+      <div class="ctrl-row">
+        <select id="edit-pattern" onchange="runEditFilter()">
+          <option value="X">Pola X</option>
+          <option value="O">Pola O</option>
+          <option value="N">Tidak Berpola</option>
+        </select>
+      </div>
+    </div>
+    <div class="card col">
+      <div class="card-title">Input</div>
+      <div id="edit-input-grid" class="px-grid px-sm" style="grid-template-columns:repeat(9,1fr)"></div>
+    </div>
+    <div class="card col">
+      <div class="card-title">Feature Map Hasil</div>
+      <div id="edit-fm-grid" class="px-grid px-sm" style="grid-template-columns:repeat(7,1fr)"></div>
+      <div style="font-size:10px; color:var(--txt3); margin-top:6px">Hijau = nilai tinggi | Merah = negatif</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Filter Bawaan Terkenal</div>
+    <div id="known-filters" class="row" style="gap:10px; margin-bottom:0"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SECTION: ARCHITECTURE
+════════════════════════════════════════ -->
+<div id="s-arch" class="section">
+  <div class="section-header">
+    <div class="section-eyebrow">BAB 09</div>
+    <div class="section-title">Pipeline CNN Lengkap</div>
+    <div class="section-desc">Klik setiap blok untuk melihat detail layer tersebut.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Arsitektur CNN untuk Klasifikasi X/O/Noise</div>
+    <div class="arch-pipeline" id="arch-pipeline"></div>
+  </div>
+
+  <div class="card" id="arch-detail-card">
+    <div class="card-title" id="arch-detail-title">Klik layer di atas untuk melihat detail</div>
+    <div id="arch-detail-content" style="font-size:12px; color:var(--txt2); line-height:1.7"></div>
+  </div>
+
+  <div class="row">
+    <div class="card col">
+      <div class="card-title">Ukuran Data per Layer</div>
+      <div id="size-table" style="font-size:12px; font-family:var(--mono)"></div>
+    </div>
+    <div class="card col">
+      <div class="card-title">Jumlah Parameter per Layer</div>
+      <div id="param-table" style="font-size:12px; font-family:var(--mono)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SECTION: PLAYGROUND
+════════════════════════════════════════ -->
+<div id="s-playground" class="section">
+  <div class="section-header">
+    <div class="section-eyebrow">BAB 10</div>
+    <div class="section-title">Playground — Gambar Sendiri</div>
+    <div class="section-desc">Gambar pola di grid 9×9, lalu jalankan konvolusi dengan filter pilihan Anda. Lihat feature map hasilnya secara real-time.</div>
+  </div>
+
+  <div class="row">
+    <div class="card col" style="min-width:240px">
+      <div class="card-title">Gambar di Grid <span class="tag tag-blue">Klik untuk toggle</span></div>
+      <div id="playground-grid" class="px-grid" style="grid-template-columns:repeat(9,1fr); cursor:pointer; margin:8px 0"></div>
+      <div class="ctrl-row">
+        <button class="btn" onclick="clearPlayground()">Hapus Semua</button>
+        <button class="btn" onclick="fillPreset('X')">Isi Pola X</button>
+        <button class="btn" onclick="fillPreset('O')">Isi Pola O</button>
+      </div>
+    </div>
+
+    <div class="card col" style="min-width:220px">
+      <div class="card-title">Pilih Filter</div>
+      <div id="pg-filter-select" style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px"></div>
+      <div class="card-title" style="margin-top:8px">Filter Preview</div>
+      <div id="pg-filter-preview" class="filter-grid" style="margin-top:6px"></div>
+    </div>
+
+    <div class="card col" style="min-width:180px">
+      <div class="card-title">Feature Map (7×7)</div>
+      <div id="pg-fm-grid" class="px-grid px-sm" style="grid-template-columns:repeat(7,1fr); margin:8px 0"></div>
+      <div class="card-title" style="margin-top:8px">Setelah ReLU</div>
+      <div id="pg-relu-grid" class="px-grid px-sm" style="grid-template-columns:repeat(7,1fr); margin:8px 0"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end main -->
+</div><!-- end app -->
+
+<!-- TOOLTIP -->
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ═══════════════════════════════
+//  DATA
+// ═══════════════════════════════
+const PATTERNS = {
+  X: [
+    [1,0,0,0,0,0,0,0,1],
+    [0,1,0,0,0,0,0,1,0],
+    [0,0,1,0,0,0,1,0,0],
+    [0,0,0,1,0,1,0,0,0],
+    [0,0,0,0,1,0,0,0,0],
+    [0,0,0,1,0,1,0,0,0],
+    [0,0,1,0,0,0,1,0,0],
+    [0,1,0,0,0,0,0,1,0],
+    [1,0,0,0,0,0,0,0,1],
+  ],
+  O: [
+    [0,1,1,1,1,1,1,1,0],
+    [1,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,1],
+    [0,1,1,1,1,1,1,1,0],
+  ],
+  N: [
+    [1,0,1,0,1,1,0,1,0],
+    [0,1,0,0,1,0,1,0,1],
+    [1,0,0,1,0,1,0,0,0],
+    [0,1,1,0,0,0,1,1,0],
+    [1,0,0,1,1,0,0,1,1],
+    [0,0,1,0,1,1,0,0,1],
+    [1,1,0,0,0,0,1,0,0],
+    [0,1,0,1,1,0,1,0,1],
+    [1,0,1,1,0,1,0,1,0],
+  ],
+};
+
+const FILTERS = {
+  diagDR:   [[1,0,0],[0,1,0],[0,0,1]],
+  diagUL:   [[0,0,1],[0,1,0],[1,0,0]],
+  edgeH:    [[1,1,1],[0,0,0],[-1,-1,-1]],
+  edgeV:    [[1,0,-1],[1,0,-1],[1,0,-1]],
+  blur:     [[1,1,1],[1,1,1],[1,1,1]], // will normalize
+  sharp:    [[0,-1,0],[-1,5,-1],[0,-1,0]],
+  identity: [[0,0,0],[0,1,0],[0,0,0]],
+  emboss:   [[-2,-1,0],[-1,1,1],[0,1,2]],
+};
+
+const FILTER_NAMES = {
+  diagDR:'Diagonal ↘', diagUL:'Diagonal ↗', edgeH:'Edge H',
+  edgeV:'Edge V', blur:'Blur', sharp:'Sharpen', identity:'Identity', emboss:'Emboss'
+};
+
+function convolve(input, filter) {
+  const rows = input.length, cols = input[0].length;
+  const fsize = filter.length;
+  const outR = rows - fsize + 1, outC = cols - fsize + 1;
+  const out = [];
+  for (let r = 0; r < outR; r++) {
+    const row = [];
+    for (let c = 0; c < outC; c++) {
+      let s = 0;
+      for (let i = 0; i < fsize; i++)
+        for (let j = 0; j < fsize; j++)
+          s += input[r+i][c+j] * filter[i][j];
+      row.push(s);
+    }
+    out.push(row);
+  }
+  return out;
+}
+
+function relu2d(fm) {
+  return fm.map(row => row.map(v => Math.max(0, v)));
+}
+
+function maxPool2x2(fm) {
+  const out = [];
+  for (let r = 0; r < fm.length; r += 2) {
+    if (r+1 >= fm.length) break;
+    const row = [];
+    for (let c = 0; c < fm[0].length; c += 2) {
+      if (c+1 >= fm[0].length) { row.push(fm[r][c]); continue; }
+      row.push(Math.max(fm[r][c], fm[r][c+1], fm[r+1][c], fm[r+1][c+1]));
+    }
+    out.push(row);
+  }
+  return out;
+}
+
+// ── Color mapping ──
+function fmColor(v, min, max) {
+  if (v === 0) return 'off';
+  const r = (v - min) / (max - min || 1);
+  if (v < 0) return 'neg';
+  if (r > 0.7) return 'on';
+  if (r > 0.3) return 'mid';
+  return 'mid';
+}
+
+// ── Build pixel grid ──
+function buildGrid(container, data, size = 'normal', clickable = false, clickFn = null) {
+  if (!container || !Array.isArray(data)) return;
+
+  // 1. Bersihkan kontainer & atur CSS Grid agar pas membentuk 9x9 (atau dinamis)
+  container.innerHTML = '';
+  container.style.display = 'grid';
+  container.style.gridTemplateColumns = `repeat(${data[0]?.length || 9}, 0fr)`;
+
+  // 2. Sederhanakan pencarian nilai maksimum (Gunakan .flat() bawaan modern)
+  const flat = data.flat();
+  const max = Math.max(...flat);
+
+  // 3. Gunakan DocumentFragment untuk optimasi performa DOM
+  const fragment = document.createDocumentFragment();
+
+  data.forEach((row, ri) => {
+    row.forEach((v, ci) => {
+      const cell = document.createElement('div');
+      cell.classList.add('px-cell');
+      
+      // Mengatur ukuran cell
+      if (size === 'sm') cell.classList.add('px-sm');
+      if (size === 'xs') cell.classList.add('px-xs');
+      
+      // Isi teks cell
+      cell.textContent = (size === 'xs') ? '' : v;
+
+      // Logika pewarnaan berdasarkan tipe data
+      if (typeof v === 'number') {
+        if (v > 0) {
+          const intensity = max > 0 ? v / max : 0;
+          const r = Math.round(20 + 60 * intensity);
+          const g = Math.round(80 + 120 * intensity);
+          const b = Math.round(200 + 55 * intensity);
+          cell.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+          cell.style.color = intensity > 0.5 ? '#fff' : '#8ad';
+        } else if (v < 0) {
+          cell.style.backgroundColor = '#3d1010';
+          cell.style.color = '#ef4444';
+        } else {
+          cell.style.backgroundColor = '#13161e';
+          cell.style.color = '#3a4570';
+        }
+      } else {
+        cell.classList.add(v ? 'on' : 'off');
+      }
+
+      if (clickable && typeof clickFn === 'function') {
+        cell.style.cursor = 'pointer';
+        cell.addEventListener('click', () => clickFn(ri, ci, cell));
+      }
+
+      fragment.appendChild(cell);
+    });
+  });
+
+  container.appendChild(fragment);
+}
+
+function buildBinaryGrid(container, data, cols, size='normal') {
+  container.innerHTML = '';
+  container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  data.forEach(v => {
+    const cell = document.createElement('div');
+    cell.className = 'px-cell ' + (v ? 'on' : 'off');
+    if (size === 'sm') cell.style.cssText = 'width:20px;height:20px;font-size:8px';
+    cell.textContent = v;
+    container.appendChild(cell);
+  });
+}
+
+// ══════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const navItems = document.querySelectorAll('.nav-item');
+  navItems.forEach(item => {
+    if (item.getAttribute('onclick') && item.getAttribute('onclick').includes(id)) {
+      item.classList.add('active');
+    }
+  });
+  // Init section
+  if (id === 's-intro') initIntro();
+  if (id === 's-conv') initConvDemo();
+  if (id === 's-ops') initOps();
+  if (id === 's-relu') initRelu();
+  if (id === 's-pool') initPool();
+  if (id === 's-fc') initFC();
+  if (id === 's-classify') classifyPat('X');
+  if (id === 's-filters') initFilters();
+  if (id === 's-arch') initArch();
+  if (id === 's-playground') initPlayground();
+}
+
+// ══════════════════════════════════
+//  SECTION: INTRO
+// ══════════════════════════════════
+function initIntro() {
+  buildGrid(document.getElementById('grid-x-intro'), PATTERNS.X);
+  buildGrid(document.getElementById('grid-o-intro'), PATTERNS.O);
+  buildGrid(document.getElementById('grid-n-intro'), PATTERNS.N);
+}
+
+// ══════════════════════════════════
+//  SECTION: CONV DEMO
+// ══════════════════════════════════
+let convStep = -1;
+let convTimer = null;
+let convAllSteps = [];
+
+function initConvDemo() {
+  if (convTimer) { clearInterval(convTimer); convTimer = null; }
+  convStep = -1;
+  const patKey = document.getElementById('conv-pattern').value;
+  const filtKey = document.getElementById('conv-filter').value;
+  const input = PATTERNS[patKey];
+  const filter = FILTERS[filtKey];
+  const fm = convolve(input, filter);
+
+  convAllSteps = [];
+  for (let r = 0; r < 7; r++)
+    for (let c = 0; c < 7; c++)
+      convAllSteps.push({ r, c, val: fm[r][c] });
+
+  // Build input grid
+  const ig = document.getElementById('conv-input-grid');
+  ig.innerHTML = '';
+  ig.style.gridTemplateColumns = 'repeat(9,1fr)';
+  input.forEach((row, ri) => {
+    row.forEach((v, ci) => {
+      const cell = document.createElement('div');
+      cell.className = 'px-cell ' + (v ? 'on' : 'off');
+      cell.id = `ci-${ri}-${ci}`;
+      ig.appendChild(cell);
+    });
+  });
+
+  // Build filter grid
+  const fg = document.getElementById('conv-filter-grid');
+  fg.innerHTML = '';
+  filter.forEach(row => row.forEach(v => {
+    const cell = document.createElement('div');
+    cell.className = 'px-cell';
+    cell.style.width = '36px'; cell.style.height = '36px';
+    cell.style.fontSize = '11px'; cell.style.fontWeight = '700';
+    cell.textContent = v;
+    if (v > 0) { cell.style.background = '#4f8ef7'; cell.style.color = '#fff'; }
+    else if (v < 0) { cell.style.background = '#ef4444'; cell.style.color = '#fff'; }
+    else { cell.style.background = '#13161e'; cell.style.color = '#3a4570'; }
+    fg.appendChild(cell);
+  }));
+
+  // Build FM grid (empty)
+  const fmg = document.getElementById('conv-fm-grid');
+  fmg.innerHTML = '';
+  fmg.style.gridTemplateColumns = 'repeat(7,1fr)';
+  for (let r = 0; r < 7; r++)
+    for (let c = 0; c < 7; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'px-cell off';
+      cell.id = `cfm-${r}-${c}`;
+      cell.textContent = '·';
+      fmg.appendChild(cell);
+    }
+
+  document.getElementById('conv-calc').textContent = 'Tekan "Selanjutnya" untuk mulai animasi konvolusi...';
+  document.getElementById('conv-step-info').textContent = 'Langkah 0 / 49';
+  document.getElementById('auto-btn').textContent = '▶ Auto';
+}
+
+function clearConvHL() {
+  for (let r = 0; r < 9; r++)
+    for (let c = 0; c < 9; c++) {
+      const cell = document.getElementById(`ci-${r}-${c}`);
+      if (cell) {
+        cell.className = 'px-cell ' + (PATTERNS[document.getElementById('conv-pattern').value][r][c] ? 'on' : 'off');
+        cell.style.background = '';
+        cell.style.color = '';
+      }
+    }
+}
+
+function stepConv(dir) {
+  convStep = Math.max(-1, Math.min(48, convStep + dir));
+  if (convStep < 0) { convStep = -1; return; }
+  renderConvStep(convStep);
+}
+
+function renderConvStep(idx) {
+  if (idx < 0 || idx >= convAllSteps.length) return;
+  clearConvHL();
+  const { r, c, val } = convAllSteps[idx];
+  const patKey = document.getElementById('conv-pattern').value;
+  const filtKey = document.getElementById('conv-filter').value;
+  const filter = FILTERS[filtKey];
+  const input  = PATTERNS[patKey];
+
+  // Highlight 3x3 region
+  for (let i = 0; i < 3; i++)
+    for (let j = 0; j < 3; j++) {
+      const cell = document.getElementById(`ci-${r+i}-${c+j}`);
+      if (cell) {
+        cell.style.background = '#f59e0b';
+        cell.style.color = '#1a0e00';
+      }
+    }
+
+  // Fill FM cells up to current
+  for (let k = 0; k <= idx; k++) {
+    const { r: fr, c: fc, val: fv } = convAllSteps[k];
+    const cell = document.getElementById(`cfm-${fr}-${fc}`);
+    if (cell) {
+      cell.textContent = fv;
+      const isActive = k === idx;
+      if (isActive) {
+        cell.style.background = '#22c55e'; cell.style.color = '#001a0a';
+      } else if (fv > 1) {
+        cell.style.background = '#4f8ef7'; cell.style.color = '#fff';
+      } else if (fv === 1) {
+        cell.style.background = '#14b8a6'; cell.style.color = '#001a14';
+      } else if (fv < 0) {
+        cell.style.background = '#3d1010'; cell.style.color = '#ef4444';
+      } else {
+        cell.style.background = '#1a1e2a'; cell.style.color = '#3a4570';
+      }
+    }
+  }
+
+  // Calculation
+  let terms = [];
+  for (let i = 0; i < 3; i++)
+    for (let j = 0; j < 3; j++) {
+      const fv = filter[i][j];
+      if (fv !== 0) terms.push(`${input[r+i][c+j]}×${fv}`);
+    }
+  document.getElementById('conv-calc').innerHTML =
+    `Posisi: baris <b>${r}</b>, kolom <b>${c}</b><br>` +
+    terms.join(' + ') + ` = <b style="color:${val>0?'#22c55e':val<0?'#ef4444':'#3a4570'}">${val}</b><br>` +
+    (val >= 2 ? '✅ Pola terdeteksi kuat!' : val === 1 ? '⚡ Sebagian cocok' : val < 0 ? '❌ Anti-pattern' : '⬜ Tidak cocok (0)');
+  document.getElementById('conv-step-info').textContent = `Langkah ${idx+1} / 49 | nilai: ${val}`;
+}
+
+function autoConv() {
+  if (convTimer) {
+    clearInterval(convTimer);
+    convTimer = null;
+    document.getElementById('auto-btn').textContent = '▶ Auto';
+    return;
+  }
+  document.getElementById('auto-btn').textContent = '⏸ Pause';
+  convTimer = setInterval(() => {
+    if (convStep >= 48) {
+      clearInterval(convTimer); convTimer = null;
+      document.getElementById('auto-btn').textContent = '▶ Auto';
+      return;
+    }
+    convStep++;
+    renderConvStep(convStep);
+  }, 200);
+}
+
+// ══════════════════════════════════
+//  SECTION: OPS
+// ══════════════════════════════════
+const OP_DETAILS = {
+  standard: {
+    title: 'Standard Convolution (Valid Padding, Stride=1)',
+    content: `<div style="font-size:12px;color:var(--txt2);line-height:1.8">
+      <b style="color:var(--txt)">Cara kerja:</b> Filter geser 1 piksel per langkah, tidak ada padding.<br>
+      <b style="color:var(--acc)">Input:</b> 9×9 → <b style="color:var(--green)">Output:</b> 7×7 (ukuran berkurang)<br>
+      <b style="color:var(--amber)">Parameter filter:</b> 3×3×1 = 9 bobot<br><br>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px;font-family:var(--mono);font-size:11px;color:var(--teal)">
+      Output size = ⌊(9 - 3) / 1⌋ + 1 = 7×7
+      </div>
+    </div>`,
+  },
+  same: {
+    title: 'Same Padding (Zero-Padding)',
+    content: `<div style="font-size:12px;color:var(--txt2);line-height:1.8">
+      <b style="color:var(--txt)">Cara kerja:</b> Tambahkan baris/kolom nol di tepi gambar.<br>
+      Untuk filter 3×3: padding = 1 di setiap sisi.<br>
+      <b style="color:var(--acc)">Input:</b> 9×9 + padding → 11×11 → <b style="color:var(--green)">Output:</b> 9×9 (ukuran sama!)<br><br>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px;font-family:var(--mono);font-size:11px;color:var(--teal)">
+      Padding needed = (filter_size - 1) / 2 = (3-1)/2 = 1<br>
+      Output = (9 + 2×1 - 3) / 1 + 1 = 9×9
+      </div>
+      <br><div style="border:1px solid var(--border);border-radius:6px;padding:8px;font-size:11px">
+      <div style="color:var(--txt3)">Input 9×9 setelah padding (11×11):</div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--green);margin-top:4px">0 0 0 0 0 0 0 0 0 0 0<br>0 <span style="color:var(--acc)">1 0 0 0 0 0 0 0 1</span> 0<br>0 <span style="color:var(--acc)">0 1 0 0 0 0 0 1 0</span> 0<br>... (dan seterusnya)<br>0 0 0 0 0 0 0 0 0 0 0</div>
+      </div>
+    </div>`,
+  },
+  stride: {
+    title: 'Strided Convolution (Stride=2)',
+    content: `<div style="font-size:12px;color:var(--txt2);line-height:1.8">
+      <b style="color:var(--txt)">Cara kerja:</b> Filter meloncat 2 piksel setiap langkah.<br>
+      Mengurangi ukuran output sekaligus menggantikan pooling.<br>
+      <b style="color:var(--acc)">Input:</b> 9×9 → <b style="color:var(--green)">Output:</b> 4×4 (bukan 7×7)<br><br>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px;font-family:var(--mono);font-size:11px;color:var(--teal)">
+      Output = ⌊(9 - 3) / 2⌋ + 1 = 4×4<br><br>
+      Posisi filter: (0,0), (0,2), (0,4), (0,6)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (2,0), (2,2), ..., (6,6)
+      </div>
+    </div>`,
+  },
+  depthwise: {
+    title: 'Depthwise Separable Convolution',
+    content: `<div style="font-size:12px;color:var(--txt2);line-height:1.8">
+      <b style="color:var(--txt)">Cara kerja:</b> Pisahkan konvolusi menjadi 2 tahap:<br>
+      1. <b style="color:var(--acc)">Depthwise:</b> 1 filter per channel (tidak campur channel)<br>
+      2. <b style="color:var(--green)">Pointwise:</b> Konvolusi 1×1 untuk menggabungkan channel<br><br>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px;font-family:var(--mono);font-size:11px;color:var(--teal)">
+      Standard Conv 3×3, C_in=32, C_out=64:<br>
+      Parameter = 3×3×32×64 = 18,432<br><br>
+      Depthwise Separable:<br>
+      Depthwise = 3×3×32 = 288<br>
+      Pointwise = 1×1×32×64 = 2,048<br>
+      Total = 2,336 (87% lebih hemat!)
+      </div>
+    </div>`,
+  },
+  dilated: {
+    title: 'Dilated (Atrous) Convolution',
+    content: `<div style="font-size:12px;color:var(--txt2);line-height:1.8">
+      <b style="color:var(--txt)">Cara kerja:</b> Filter "direnggangkan" dengan dilation rate = 2.<br>
+      Antara setiap bobot filter ada celah (diisi nol implisit).<br>
+      Filter 3×3 dengan dilation=2 punya jangkauan efektif 5×5!<br><br>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px;font-family:var(--mono);font-size:11px;color:var(--teal)">
+      Dilation=1: A_B_C → normal 3×3<br>
+      Dilation=2: A_·_B_·_C → jangkauan 5×5<br>
+      Dilation=4: A_·_·_·_B_·_·_·_C → jangkauan 9×9<br><br>
+      Dipakai di: DeepLab (segmentasi semantik),<br>
+      WaveNet (audio generation)
+      </div>
+    </div>`,
+  },
+  transpose: {
+    title: 'Transposed Convolution (Deconvolution)',
+    content: `<div style="font-size:12px;color:var(--txt2);line-height:1.8">
+      <b style="color:var(--txt)">Cara kerja:</b> Kebalikan konvolusi — <b style="color:var(--acc)">memperbesar</b> feature map.<br>
+      Bukan benar-benar "dekonvolusi" matematis, tapi konvolusi dengan stride pecahan.<br><br>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px;font-family:var(--mono);font-size:11px;color:var(--teal)">
+      Input 4×4 → TransposedConv(3×3, stride=2) → 9×9<br><br>
+      Dipakai di:<br>
+      • U-Net (biomedical segmentation)<br>
+      • DCGAN (generative adversarial network)<br>
+      • Encoder-Decoder arsitektur
+      </div>
+    </div>`,
+  },
+};
+
+function selectOp(key, el) {
+  document.querySelectorAll('.op-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('op-demo-title').textContent = OP_DETAILS[key].title;
+  document.getElementById('op-demo-content').innerHTML = OP_DETAILS[key].content;
+}
+
+function initOps() {
+  document.getElementById('op-demo-title').textContent = OP_DETAILS['standard'].title;
+  document.getElementById('op-demo-content').innerHTML = OP_DETAILS['standard'].content;
+
+  // Param compare
+  const data = [
+    { label: 'Standard (3×3, C=32→64)', params: 18432, color: '#ef4444' },
+    { label: 'Strided (3×3, same)', params: 18432, color: '#f59e0b' },
+    { label: 'Depthwise Sep.', params: 2336, color: '#22c55e' },
+    { label: 'Dilated (rate=2)', params: 9, color: '#4f8ef7' },
+    { label: '1×1 Pointwise', params: 2048, color: '#14b8a6' },
+  ];
+  const maxP = Math.max(...data.map(d => d.params));
+  const pc = document.getElementById('param-compare');
+  pc.innerHTML = data.map(d => `
+    <div class="bar-wrap">
+      <div class="bar-label">${d.label}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(d.params/maxP*100)}%;background:${d.color}"></div></div>
+      <div class="bar-val">${d.params.toLocaleString()}</div>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════
+//  SECTION: RELU
+// ══════════════════════════════════
+const ACT_FNS = {
+  relu: {
+    title: 'ReLU — Rectified Linear Unit',
+    formula: 'f(x) = max(0, x)',
+    note: '<strong>Kelebihan:</strong> Sederhana, tidak ada vanishing gradient untuk x>0, komputasi cepat.<br><strong>Kelemahan:</strong> "Dying ReLU" jika bobot menyebabkan input selalu negatif.',
+    fn: x => Math.max(0, x),
+  },
+  leakyrelu: {
+    title: 'Leaky ReLU',
+    formula: 'f(x) = x if x > 0, else 0.01x',
+    note: '<strong>Kelebihan:</strong> Solusi dying ReLU — nilai negatif tetap punya gradient kecil (0.01).<br><strong>Kekurangan:</strong> Nilai α=0.01 harus ditentukan manual.',
+    fn: x => x > 0 ? x : 0.01*x,
+  },
+  sigmoid: {
+    title: 'Sigmoid (Logistic)',
+    formula: 'f(x) = 1 / (1 + e^(-x))',
+    note: '<strong>Kelebihan:</strong> Output 0–1, cocok untuk probabilitas di output binary.<br><strong>Kelemahan:</strong> Vanishing gradient parah untuk x besar/kecil — jarang dipakai di hidden layer CNN modern.',
+    fn: x => 1 / (1 + Math.exp(-x)),
+  },
+  tanh: {
+    title: 'Tanh (Hyperbolic Tangent)',
+    formula: 'f(x) = (e^x - e^(-x)) / (e^x + e^(-x))',
+    note: '<strong>Kelebihan:</strong> Output -1 sampai 1, rata-rata nol (zero-centered) — lebih baik dari sigmoid untuk hidden layer.<br><strong>Kelemahan:</strong> Masih ada vanishing gradient.',
+    fn: x => Math.tanh(x),
+  },
+  elu: {
+    title: 'ELU — Exponential Linear Unit',
+    formula: 'f(x) = x if x > 0, else α(e^x - 1)',
+    note: '<strong>Kelebihan:</strong> Output negatif rata-rata mendekati nol, mempercepat konvergensi.<br><strong>Kekurangan:</strong> Lebih lambat dihitung dari ReLU.',
+    fn: x => x > 0 ? x : 1.0*(Math.exp(x)-1),
+  },
+};
+
+let activeActBtns = null;
+
+function selectActivation(key, btn) {
+  if (activeActBtns) activeActBtns.classList.remove('active');
+  btn.classList.add('active');
+  activeActBtns = btn;
+  const a = ACT_FNS[key];
+  document.getElementById('act-title').textContent = a.title;
+  document.getElementById('act-formula').textContent = a.formula;
+  document.getElementById('act-note').innerHTML = a.note;
+  drawActivation(a.fn);
+}
+
+function drawActivation(fn) {
+  const canvas = document.getElementById('act-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#1a1e2a';
+  ctx.fillRect(0,0,W,H);
+
+  const xMin=-4, xMax=4, yMin=-1.5, yMax=1.5;
+  const toX = v => (v-xMin)/(xMax-xMin)*W;
+  const toY = v => H - (v-yMin)/(yMax-yMin)*H;
+
+  // Grid
+  ctx.strokeStyle = '#2a3050';
+  ctx.lineWidth = 0.5;
+  for (let x=-4; x<=4; x++) {
+    ctx.beginPath(); ctx.moveTo(toX(x),0); ctx.lineTo(toX(x),H); ctx.stroke();
+  }
+  for (let y=-1; y<=1; y+=0.5) {
+    ctx.beginPath(); ctx.moveTo(0,toY(y)); ctx.lineTo(W,toY(y)); ctx.stroke();
+  }
+  // Axes
+  ctx.strokeStyle = '#3a4570';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0,toY(0)); ctx.lineTo(W,toY(0)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(toX(0),0); ctx.lineTo(toX(0),H); ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle = '#5a6380';
+  ctx.font = '10px '+getComputedStyle(document.body).fontFamily;
+  ctx.textAlign = 'center';
+  for (let x=-4; x<=4; x+=2) {
+    ctx.fillText(x, toX(x), toY(0)+14);
+  }
+
+  // Function
+  ctx.strokeStyle = '#4f8ef7';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  for (let px=0; px<W; px++) {
+    const x = xMin + (px/W)*(xMax-xMin);
+    const y = fn(x);
+    const py = toY(Math.max(yMin, Math.min(yMax, y)));
+    if (px===0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+}
+
+const RELU_FM_BEFORE = [
+  [ 3,-1, 0, 2,-1, 0, 1],
+  [-1, 3, 0, 0, 0,-1, 0],
+  [ 0, 0, 2, 0, 1, 0,-2],
+  [ 1, 0, 0, 2, 0,-1, 0],
+  [-1, 1, 0, 0, 3,-1, 0],
+  [ 0,-2, 0, 1, 0, 2,-1],
+  [ 1, 0,-1, 0, 0, 0, 3],
+];
+
+function initRelu() {
+  buildGrid(document.getElementById('relu-before'), RELU_FM_BEFORE, 'sm');
+  buildGrid(document.getElementById('relu-after'), relu2d(RELU_FM_BEFORE), 'sm');
+  drawActivation(ACT_FNS.relu.fn);
+}
+
+// ══════════════════════════════════
+//  SECTION: POOLING
+// ══════════════════════════════════
+let activePoolType = 'max';
+const POOL_FM = [
+  [3,0,0,2,0,1],
+  [0,2,1,0,3,0],
+  [0,0,2,1,0,2],
+  [1,3,0,0,2,1],
+  [0,1,0,2,0,3],
+  [2,0,1,0,3,0],
+];
+
+function selectPool(type, btn) {
+  document.querySelectorAll('#s-pool .btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activePoolType = type;
+  const titles = { max: 'Max Pooling 2×2', avg: 'Average Pooling 2×2', global: 'Global Average Pooling' };
+  const notes = {
+    max:    '<strong>Max Pooling:</strong> Ambil nilai terbesar. Mendeteksi kehadiran fitur — tidak peduli posisi persisnya di dalam region.',
+    avg:    '<strong>Average Pooling:</strong> Rata-rata semua nilai dalam region. Lebih halus, mempertahankan info distribusi nilai.',
+    global: '<strong>Global Avg Pool:</strong> Rata-rata seluruh feature map menjadi 1 nilai per channel. Menggantikan Flatten di arsitektur modern (ResNet, EfficientNet).',
+  };
+  document.getElementById('pool-title').textContent = titles[type];
+  document.getElementById('pool-note').innerHTML = notes[type];
+  initPool();
+}
+
+function initPool() {
+  const ig = document.getElementById('pool-input');
+  ig.innerHTML = '';
+  ig.style.gridTemplateColumns = 'repeat(6,1fr)';
+  POOL_FM.forEach((row, ri) => {
+    row.forEach((v, ci) => {
+      const cell = document.createElement('div');
+      cell.className = 'px-cell';
+      cell.style.width = '28px'; cell.style.height = '28px'; cell.style.fontSize = '10px';
+      cell.textContent = v;
+      cell.id = `pm-${ri}-${ci}`;
+      if (v > 2) { cell.style.background = '#4f8ef7'; cell.style.color = '#fff'; }
+      else if (v > 0) { cell.style.background = '#14b8a6'; cell.style.color = '#001'; }
+      else { cell.style.background = '#13161e'; cell.style.color = '#3a4570'; }
+      cell.addEventListener('click', () => highlightPool(ri, ci));
+      ig.appendChild(cell);
+    });
+  });
+
+  // Build output
+  const og = document.getElementById('pool-output');
+  og.innerHTML = '';
+  og.style.gridTemplateColumns = 'repeat(3,1fr)';
+  for (let br = 0; br < 3; br++)
+    for (let bc = 0; bc < 3; bc++) {
+      const cell = document.createElement('div');
+      cell.className = 'px-cell';
+      cell.style.width = '28px'; cell.style.height = '28px'; cell.style.fontSize = '11px';
+      cell.id = `po-${br}-${bc}`;
+      const val = poolVal(br*2, bc*2);
+      cell.textContent = typeof val === 'number' ? val.toFixed(activePoolType==='avg'?1:0) : val;
+      if (parseFloat(val) >= 2.5) { cell.style.background = '#4f8ef7'; cell.style.color = '#fff'; }
+      else if (parseFloat(val) > 0) { cell.style.background = '#14b8a6'; cell.style.color = '#001'; }
+      else { cell.style.background = '#13161e'; cell.style.color = '#3a4570'; }
+      og.appendChild(cell);
+    }
+}
+
+function poolVal(r, c) {
+  const vals = [POOL_FM[r][c], POOL_FM[r][c+1], POOL_FM[r+1][c], POOL_FM[r+1][c+1]];
+  if (activePoolType === 'max') return Math.max(...vals);
+  if (activePoolType === 'avg') return vals.reduce((a,b)=>a+b,0)/4;
+  return vals.reduce((a,b)=>a+b,0)/4;
+}
+
+function highlightPool(ri, ci) {
+  // clear all
+  POOL_FM.forEach((row, r) => row.forEach((v, c) => {
+    const cell = document.getElementById(`pm-${r}-${c}`);
+    if (cell) {
+      if (v > 2) { cell.style.background = '#4f8ef7'; cell.style.color = '#fff'; cell.style.outline = ''; }
+      else if (v > 0) { cell.style.background = '#14b8a6'; cell.style.color = '#001'; cell.style.outline = ''; }
+      else { cell.style.background = '#13161e'; cell.style.color = '#3a4570'; cell.style.outline = ''; }
+    }
+  }));
+  const br = Math.floor(ri/2), bc = Math.floor(ci/2);
+  const r0 = br*2, c0 = bc*2;
+  const region = [POOL_FM[r0][c0], POOL_FM[r0][c0+1], POOL_FM[r0+1][c0], POOL_FM[r0+1][c0+1]];
+  for (let i=0;i<2;i++) for (let j=0;j<2;j++) {
+    const cell = document.getElementById(`pm-${r0+i}-${c0+j}`);
+    if (cell) { cell.style.background = '#f59e0b'; cell.style.color = '#1a0e00'; cell.style.outline = '2px solid #f59e0b'; }
+  }
+  const v = poolVal(r0, c0);
+  const op = { max:'MAX', avg:'AVG', global:'AVG' }[activePoolType];
+  document.getElementById('pool-calc').innerHTML =
+    `Region [baris ${r0}-${r0+1}, kolom ${c0}-${c0+1}]<br>` +
+    `Nilai: [${region.join(', ')}]<br>` +
+    `${op}(${region.join(', ')}) = <b style="color:#22c55e">${typeof v==='number'?v.toFixed(activePoolType==='avg'?1:0):v}</b>`;
+
+  // Highlight output cell
+  document.querySelectorAll('[id^="po-"]').forEach(c => c.style.outline = '');
+  const oc = document.getElementById(`po-${br}-${bc}`);
+  if (oc) oc.style.outline = '2px solid #22c55e';
+}
+
+// ══════════════════════════════════
+//  SECTION: FC
+// ══════════════════════════════════
+function initFC() {
+  renderFC(false);
+}
+
+function renderFC(animated) {
+  const wrap = document.getElementById('fc-vis');
+  const layers = [
+    { label:'Pooled\n3×3×4', size:36, color:'#4f8ef7', sub:'36 nilai' },
+    { label:'Flatten', size:24, color:'#7c3aed', sub:'[v₁..v₃₆]' },
+    { label:'FC Layer\n16 neuron', size:32, color:'#14b8a6', sub:'W·x + b' },
+    { label:'FC Layer\n8 neuron', size:24, color:'#22c55e', sub:'ReLU' },
+    { label:'Output\n3 kelas', size:18, color:'#f59e0b', sub:'Softmax' },
+  ];
+  wrap.innerHTML = `<div style="display:flex;align-items:center;gap:8px;overflow-x:auto;padding:8px 0">` +
+    layers.map((l,i) => `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">
+        <div style="background:${l.color}22;border:1px solid ${l.color}55;border-radius:8px;padding:10px 14px;text-align:center;min-width:72px;transition:all 0.3s;opacity:${animated?'1':'0.4'}" id="fc-layer-${i}">
+          <div style="font-size:11px;font-weight:600;color:${l.color};white-space:pre-line">${l.label}</div>
+          <div style="font-size:9px;color:var(--txt3);margin-top:2px;font-family:var(--mono)">${l.sub}</div>
+        </div>
+      </div>
+      ${i<layers.length-1 ? `<div style="color:var(--txt3);font-size:14px;flex-shrink:0;opacity:${animated?'1':'0.3'}">→</div>` : ''}
+    `).join('') +
+  `</div>`;
+}
+
+let fcAnimTimer = null;
+function animateFC() {
+  if (fcAnimTimer) { clearInterval(fcAnimTimer); fcAnimTimer = null; }
+  resetFC();
+  let step = 0;
+  fcAnimTimer = setInterval(() => {
+    const el = document.getElementById(`fc-layer-${step}`);
+    if (el) el.style.opacity = '1';
+    step++;
+    if (step > 4) { clearInterval(fcAnimTimer); fcAnimTimer = null; }
+  }, 500);
+}
+function resetFC() { renderFC(false); }
+
+// ══════════════════════════════════
+//  SECTION: CLASSIFY
+// ══════════════════════════════════
+const FOUR_FILTERS = [
+  { key:'diagDR', name:'Diagonal ↘', tag:'tag-blue' },
+  { key:'diagUL', name:'Diagonal ↗', tag:'tag-purple' },
+  { key:'edgeH',  name:'Tepi Horizontal', tag:'tag-green' },
+  { key:'edgeV',  name:'Tepi Vertikal', tag:'tag-amber' },
+];
+const PREDS = {
+  X: { X:0.92, O:0.05, N:0.03, winner:'X', note:'Filter diagonal (A dan B) sangat aktif → sinyal kuat untuk kelas X.' },
+  O: { X:0.04, O:0.91, N:0.05, winner:'O', note:'Filter tepi horizontal (C) dan vertikal (D) aktif di pinggir → skor tinggi O.' },
+  N: { X:0.11, O:0.14, N:0.75, winner:'N', note:'Tidak ada filter dominan → skor tersebar, "tidak berpola" menang tipis.' },
+};
+
+function classifyPat(key) {
+  ['X','O','N'].forEach(k => document.getElementById(`cls-btn-${k}`).classList.remove('active'));
+  document.getElementById(`cls-btn-${key}`).classList.add('active');
+
+  const input = PATTERNS[key];
+  buildGrid(document.getElementById('cls-input-grid'), input, 'sm');
+
+  const fmA = relu2d(convolve(input, FILTERS.diagDR));
+  buildGrid(document.getElementById('cls-conv-grid'), fmA, 'sm');
+
+  const pooled = maxPool2x2(fmA);
+  buildGrid(document.getElementById('cls-pool-grid'), pooled, 'normal');
+
+  const p = PREDS[key];
+  const names = { X:'Pola X', O:'Pola O', N:'Tidak Berpola' };
+  const colors = { X:'#4f8ef7', O:'#22c55e', N:'#f59e0b' };
+  document.getElementById('cls-winner-tag').textContent = names[p.winner];
+  document.getElementById('cls-bars').innerHTML = ['X','O','N'].map(k => `
+    <div class="bar-wrap">
+      <div class="bar-label" style="color:${k===p.winner?colors[k]:'var(--txt2)'};font-weight:${k===p.winner?'600':'400'}">${names[k]}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(p[k]*100)}%;background:${colors[k]}"></div></div>
+      <div class="bar-val" style="color:${colors[k]}">${Math.round(p[k]*100)}%</div>
+    </div>
+  `).join('');
+  document.getElementById('cls-explanation').innerHTML = p.note;
+
+  // Four filter maps
+  const fm4 = document.getElementById('four-filter-maps');
+  fm4.innerHTML = '';
+  FOUR_FILTERS.forEach(f => {
+    const fm = relu2d(convolve(input, FILTERS[f.key]));
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;flex-direction:column;gap:6px;align-items:center';
+    div.innerHTML = `<div style="font-size:11px;font-weight:600;color:var(--txt)">${f.name}</div>`;
+    const g = document.createElement('div');
+    g.className = 'px-grid px-xs';
+    g.style.gridTemplateColumns = 'repeat(7,1fr)';
+    buildGrid(g, fm, 'xs');
+    div.appendChild(g);
+    fm4.appendChild(div);
+  });
+}
+
+// ══════════════════════════════════
+//  SECTION: FILTER EXPLORER
+// ══════════════════════════════════
+let editFilter = [[1,0,0],[0,1,0],[0,0,1]];
+
+function initFilters() {
+  buildEditFilter();
+  runEditFilter();
+  buildKnownFilters();
+}
+
+function buildEditFilter() {
+  const g = document.getElementById('edit-filter-grid');
+  g.innerHTML = '';
+  editFilter.forEach((row, ri) => {
+    row.forEach((v, ci) => {
+      const inp = document.createElement('input');
+      inp.type = 'number';
+      inp.value = v;
+      inp.min = -3; inp.max = 3; inp.step = 1;
+      inp.style.cssText = `width:40px;height:40px;text-align:center;font-size:13px;font-weight:700;
+        background:var(--bg3);border:1px solid var(--border2);border-radius:4px;color:var(--txt);
+        font-family:var(--mono)`;
+      inp.addEventListener('input', () => {
+        editFilter[ri][ci] = parseFloat(inp.value) || 0;
+        runEditFilter();
+      });
+      g.appendChild(inp);
+    });
+  });
+}
+
+function loadPreset() {
+  const key = document.getElementById('preset-filter').value;
+  if (!key) return;
+  editFilter = FILTERS[key].map(r => [...r]);
+  buildEditFilter();
+  runEditFilter();
+}
+
+function runEditFilter() {
+  const patKey = document.getElementById('edit-pattern').value;
+  const input = PATTERNS[patKey];
+  buildGrid(document.getElementById('edit-input-grid'), input, 'sm');
+  const fm = convolve(input, editFilter);
+  buildGrid(document.getElementById('edit-fm-grid'), fm, 'sm');
+}
+
+function buildKnownFilters() {
+  const kf = document.getElementById('known-filters');
+  kf.innerHTML = '';
+  Object.entries(FILTERS).forEach(([key, f]) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer';
+    div.innerHTML = `<div style="font-size:11px;font-weight:600;color:var(--txt)">${FILTER_NAMES[key]}</div>`;
+    const g = document.createElement('div');
+    g.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:1px';
+    f.forEach(row => row.forEach(v => {
+      const cell = document.createElement('div');
+      cell.style.cssText = `width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;font-family:var(--mono);border-radius:2px`;
+      cell.textContent = v;
+      if (v > 0) { cell.style.background = '#4f8ef7'; cell.style.color = '#fff'; }
+      else if (v < 0) { cell.style.background = '#ef4444'; cell.style.color = '#fff'; }
+      else { cell.style.background = '#1a1e2a'; cell.style.color = '#3a4570'; }
+      g.appendChild(cell);
+    }));
+    div.appendChild(g);
+    div.addEventListener('click', () => {
+      editFilter = f.map(r => [...r]);
+      buildEditFilter();
+      runEditFilter();
+    });
+    kf.appendChild(div);
+  });
+}
+
+// ══════════════════════════════════
+//  SECTION: ARCH
+// ══════════════════════════════════
+const ARCH_LAYERS = [
+  { id:'input',  label:'Input', dim:'9×9×1', color:'#4f8ef7', h:100, n:1,
+    detail:'<b>Gambar grayscale 9×9.</b><br>1 channel, nilai piksel 0 atau 1.<br>Total: 81 nilai input.' },
+  { id:'conv1',  label:'Conv1', dim:'4 filter\n3×3', color:'#7c3aed', h:88, n:4,
+    detail:'<b>Conv Layer 1 — 4 filter 3×3.</b><br>Setiap filter belajar mendeteksi 1 fitur primitif.<br>Parameter: 4 × (3×3×1 + 1) = 40<br>Output: 7×7×4' },
+  { id:'relu1',  label:'ReLU', dim:'7×7×4', color:'#ef4444', h:80, n:4,
+    detail:'<b>Aktivasi ReLU setelah Conv1.</b><br>Semua nilai negatif → 0.<br>Tidak ada parameter (zero-weight operation).' },
+  { id:'pool1',  label:'MaxPool', dim:'3×3×4', color:'#22c55e', h:70, n:4,
+    detail:'<b>Max Pooling 2×2 (stride=2).</b><br>Meringkas 7×7 → 3×3 per channel.<br>4 channel dipertahankan.<br>Tidak ada parameter.' },
+  { id:'conv2',  label:'Conv2', dim:'8 filter\n3×3', color:'#f59e0b', h:60, n:8,
+    detail:'<b>Conv Layer 2 — 8 filter 3×3.</b><br>Belajar pola lebih kompleks dari kombinasi fitur layer 1.<br>Parameter: 8 × (3×3×4 + 1) = 296<br>Output: 1×1×8 (valid padding)' },
+  { id:'relu2',  label:'ReLU', dim:'1×1×8', color:'#ef4444', h:44, n:8,
+    detail:'<b>Aktivasi ReLU setelah Conv2.</b><br>Sama seperti sebelumnya — potong nilai negatif.' },
+  { id:'flat',   label:'Flatten', dim:'[8]', color:'#14b8a6', h:36, n:1,
+    detail:'<b>Flatten (Reshape).</b><br>1×1×8 → vektor [8 nilai].<br>Tidak ada parameter.' },
+  { id:'fc1',    label:'FC-16', dim:'16\nneuron', color:'#ec4899', h:52, n:16,
+    detail:'<b>Fully Connected Layer 1 — 16 neuron.</b><br>Parameter: 8×16 + 16 = 144<br>Aktivasi: ReLU' },
+  { id:'out',    label:'Output', dim:'3 kelas', color:'#f59e0b', h:36, n:3,
+    detail:'<b>Output Layer — 3 neuron.</b><br>Parameter: 16×3 + 3 = 51<br>Aktivasi: Softmax → probabilitas X, O, Noise.<br><b style="color:var(--green)">Total parameter: 40 + 296 + 144 + 51 = 531</b>' },
+];
+
+function initArch() {
+  const pipe = document.getElementById('arch-pipeline');
+  pipe.innerHTML = '';
+  ARCH_LAYERS.forEach((l, i) => {
+    const step = document.createElement('div');
+    step.style.cssText = 'display:flex;align-items:center;flex-shrink:0';
+    // Layer block
+    const layerDiv = document.createElement('div');
+    layerDiv.style.cssText = `display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:transform 0.2s`;
+    layerDiv.innerHTML = `
+      <div style="display:flex;gap:2px;align-items:flex-end">
+        ${Array.from({length:Math.min(l.n,8)}).map((_,k) => `
+          <div style="width:${l.n===1?28:l.n<=4?16:10}px;height:${l.h}px;background:${l.color}33;border:1px solid ${l.color}66;border-radius:2px;transition:all .3s"></div>
+        `).join('')}
+        ${l.n > 8 ? `<div style="font-size:9px;color:${l.color};align-self:center">+</div>` : ''}
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--txt);text-align:center">${l.label}</div>
+      <div style="font-size:9px;color:var(--txt3);font-family:var(--mono);text-align:center;white-space:pre-line">${l.dim}</div>
+    `;
+    layerDiv.addEventListener('mouseenter', () => { layerDiv.style.transform = 'translateY(-4px)'; });
+    layerDiv.addEventListener('mouseleave', () => { layerDiv.style.transform = ''; });
+    layerDiv.addEventListener('click', () => showArchDetail(l));
+    step.appendChild(layerDiv);
+    if (i < ARCH_LAYERS.length - 1) {
+      const arr = document.createElement('div');
+      arr.style.cssText = 'color:var(--border2);font-size:12px;padding:0 3px;margin-bottom:28px;flex-shrink:0';
+      arr.textContent = '→';
+      step.appendChild(arr);
+    }
+    pipe.appendChild(step);
+  });
+
+  // Size table
+  const st = document.getElementById('size-table');
+  st.innerHTML = ARCH_LAYERS.map(l => `
+    <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
+      <span style="color:var(--txt2)">${l.label}</span>
+      <span style="color:var(--teal)">${l.dim.replace(/\n/g,' ')}</span>
+    </div>
+  `).join('');
+
+  // Param table
+  const paramData = [
+    ['Conv1', '4×(3×3×1+1)', 40],
+    ['Conv2', '8×(3×3×4+1)', 296],
+    ['FC-16', '8×16+16', 144],
+    ['Output', '16×3+3', 51],
+    ['TOTAL', '', 531],
+  ];
+  document.getElementById('param-table').innerHTML = paramData.map((r,i) => `
+    <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border);${i===paramData.length-1?'color:var(--green);font-weight:700':''}">
+      <span style="color:${i===paramData.length-1?'var(--green)':'var(--txt2)'}">${r[0]}</span>
+      <span style="color:var(--txt3);font-size:10px">${r[1]}</span>
+      <span style="color:${i===paramData.length-1?'var(--green)':'var(--teal)'}">${r[2]}</span>
+    </div>
+  `).join('');
+}
+
+function showArchDetail(l) {
+  document.getElementById('arch-detail-title').textContent = l.label + ' — Detail';
+  document.getElementById('arch-detail-content').innerHTML = l.detail;
+}
+
+// ══════════════════════════════════
+//  SECTION: PLAYGROUND
+// ══════════════════════════════════
+let pgGrid = Array.from({length:9}, () => Array(9).fill(0));
+let pgFilter = FILTERS.diagDR;
+let pgFilterKey = 'diagDR';
+let pgDrawing = false;
+let pgLastVal = 0;
+
+function initPlayground() {
+  const g = document.getElementById('playground-grid');
+  g.innerHTML = '';
+  pgGrid.forEach((row, ri) => {
+    row.forEach((v, ci) => {
+      const cell = document.createElement('div');
+      cell.className = 'px-cell ' + (v ? 'on' : 'off');
+      cell.id = `pg-${ri}-${ci}`;
+      cell.addEventListener('mousedown', e => {
+        pgDrawing = true;
+        pgLastVal = pgGrid[ri][ci] ? 0 : 1;
+        togglePgCell(ri, ci);
+        e.preventDefault();
+      });
+      cell.addEventListener('mouseover', e => {
+        if (pgDrawing) togglePgCell(ri, ci, pgLastVal);
+        e.preventDefault();
+      });
+      g.appendChild(cell);
+    });
+  });
+  document.addEventListener('mouseup', () => { pgDrawing = false; });
+
+  // Filter select
+  const fs = document.getElementById('pg-filter-select');
+  fs.innerHTML = '';
+  Object.keys(FILTERS).forEach(key => {
+    const btn = document.createElement('button');
+    btn.className = 'btn' + (key === pgFilterKey ? ' active' : '');
+    btn.textContent = FILTER_NAMES[key];
+    btn.onclick = () => {
+      document.querySelectorAll('#pg-filter-select .btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      pgFilterKey = key;
+      pgFilter = FILTERS[key];
+      buildPgFilterPreview();
+      runPlayground();
+    };
+    fs.appendChild(btn);
+  });
+
+  buildPgFilterPreview();
+  runPlayground();
+}
+
+function togglePgCell(ri, ci, forceVal) {
+  const val = forceVal !== undefined ? forceVal : (pgGrid[ri][ci] ? 0 : 1);
+  pgGrid[ri][ci] = val;
+  const cell = document.getElementById(`pg-${ri}-${ci}`);
+  if (cell) cell.className = 'px-cell ' + (val ? 'on' : 'off');
+  runPlayground();
+}
+
+function buildPgFilterPreview() {
+  const g = document.getElementById('pg-filter-preview');
+  g.innerHTML = '';
+  pgFilter.forEach(row => row.forEach(v => {
+    const cell = document.createElement('div');
+    cell.className = 'px-cell';
+    cell.style.width = '36px'; cell.style.height = '36px'; cell.style.fontSize = '11px';
+    cell.textContent = v;
+    if (v > 0) { cell.style.background = '#4f8ef7'; cell.style.color = '#fff'; }
+    else if (v < 0) { cell.style.background = '#ef4444'; cell.style.color = '#fff'; }
+    else { cell.style.background = '#13161e'; cell.style.color = '#3a4570'; }
+    g.appendChild(cell);
+  }));
+}
+
+function runPlayground() {
+  const fm = convolve(pgGrid, pgFilter);
+  const rfm = relu2d(fm);
+  buildGrid(document.getElementById('pg-fm-grid'), fm, 'sm');
+  buildGrid(document.getElementById('pg-relu-grid'), rfm, 'sm');
+}
+
+function clearPlayground() {
+  pgGrid = Array.from({length:9}, () => Array(9).fill(0));
+  initPlayground();
+}
+
+function fillPreset(key) {
+  pgGrid = PATTERNS[key].map(r => [...r]);
+  // Update grid cells
+  pgGrid.forEach((row, ri) => row.forEach((v, ci) => {
+    const cell = document.getElementById(`pg-${ri}-${ci}`);
+    if (cell) cell.className = 'px-cell ' + (v ? 'on' : 'off');
+  }));
+  runPlayground();
+}
+
+// ══════════════════════════════════
+//  INIT
+// ══════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  initIntro();
+});
+// Init first section
+initIntro();
+</script>
+</body>
+</html>
